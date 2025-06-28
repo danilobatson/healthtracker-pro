@@ -1,31 +1,43 @@
-#!/usr/bin/env node
+const http = require('http');
 
-async function testGraphQL() {
-  console.log('🧪 Testing GraphQL server...');
-  
-  try {
-    // Test if server can start (basic syntax check)
-    console.log('✅ GraphQL schema loaded');
-    console.log('✅ Resolvers configured');
-    console.log('✅ API route created');
-    
-    // Create test queries for manual testing
-    const testQueries = {
-      me: `query { me { id email } }`,
-      healthRecords: `query { healthRecords { id recordType valueNumeric unit } }`
-    };
-    
-    console.log('\n📋 Test queries ready:');
-    Object.entries(testQueries).forEach(([name, query]) => {
-      console.log(`${name}: ${query}`);
-    });
-    
-    console.log('\n🚀 Start server with: npm run dev');
-    console.log('🌐 Visit: http://localhost:3000/api/graphql');
-    
-  } catch (error) {
-    console.error('❌ GraphQL test failed:', error);
+const testQuery = {
+  query: `{ __schema { queryType { name } } }`
+};
+
+const postData = JSON.stringify(testQuery);
+
+const options = {
+  hostname: 'localhost',
+  port: 3000,
+  path: '/api/graphql',
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'Content-Length': Buffer.byteLength(postData)
   }
-}
+};
 
-testGraphQL();
+console.log('Testing GraphQL endpoint...');
+
+const req = http.request(options, (res) => {
+  console.log(`Status: ${res.statusCode}`);
+  console.log(`Headers: ${JSON.stringify(res.headers)}`);
+  
+  let data = '';
+  res.on('data', (chunk) => {
+    data += chunk;
+  });
+  
+  res.on('end', () => {
+    console.log('Response:', data);
+    process.exit(0);
+  });
+});
+
+req.on('error', (e) => {
+  console.error(`Problem with request: ${e.message}`);
+  process.exit(1);
+});
+
+req.write(postData);
+req.end();

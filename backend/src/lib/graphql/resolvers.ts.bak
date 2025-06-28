@@ -1,0 +1,139 @@
+import { Resolvers } from './generated/graphql';
+import { db } from '../firebase/admin';
+
+export const resolvers: Resolvers = {
+  Query: {
+    me: async (parent, args, context) => {
+      if (!context.user) {
+        throw new Error('Not authenticated');
+      }
+      
+      try {
+        const userDoc = await db.collection('users').doc(context.user.id).get();
+        
+        if (!userDoc.exists) {
+          const userData = {
+            id: context.user.id,
+            email: context.user.email || 'unknown@example.com',
+            fullName: null,
+            createdAt: new Date(),
+          };
+          await db.collection('users').doc(context.user.id).set(userData);
+          return userData;
+        }
+        
+        const data = userDoc.data();
+        return { 
+          id: userDoc.id, 
+          email: data?.email || context.user.email || 'unknown@example.com',
+          fullName: data?.fullName || null,
+          createdAt: data?.createdAt?.toDate() || new Date()
+        };
+      } catch (error) {
+        console.error('Error fetching user:', error);
+        throw new Error('Failed to fetch user');
+      }
+    },
+    
+    healthRecord: async (parent, args, context) => {
+      if (!context.user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { id } = args as { id: string };
+      
+      try {
+        const recordDoc = await db
+          .collection(`users/${context.user.id}/healthRecords`)
+          .doc(id)
+          .get();
+          
+        if (!recordDoc.exists) {
+          return null;
+        }
+        
+        const data = recordDoc.data();
+        return {
+          id: recordDoc.id,
+          recordType: data?.recordType || 'HEART_RATE',
+          valueNumeric: data?.valueNumeric || null,
+          unit: data?.unit || null,
+          recordedAt: data?.recordedAt?.toDate() || new Date(),
+          createdAt: data?.createdAt?.toDate() || new Date(),
+        };
+      } catch (error) {
+        console.error('Error fetching health record:', error);
+        throw new Error('Failed to fetch health record');
+      }
+    },
+  },
+  
+  Mutation: {
+    updateProfile: async (parent, args, context) => {
+      if (!context.user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { fullName } = args as { fullName?: string };
+      
+      try {
+        const updateData = {
+          fullName,
+          updatedAt: new Date(),
+        };
+        
+        await db.collection('users').doc(context.user.id).update(updateData);
+        
+        const updatedDoc = await db.collection('users').doc(context.user.id).get();
+        const data = updatedDoc.data();
+        
+        return { 
+          id: updatedDoc.id, 
+          email: data?.email || context.user.email || 'unknown@example.com',
+          fullName: data?.fullName || null,
+          createdAt: data?.createdAt?.toDate() || new Date()
+        };
+      } catch (error) {
+        console.error('Error updating profile:', error);
+        throw new Error('Failed to update profile');
+      }
+    },
+    
+    addHealthRecord: async (parent, args, context) => {
+      if (!context.user) {
+        throw new Error('Not authenticated');
+      }
+      
+      const { input } = args as { input: any };
+      
+      try {
+        const recordData = {
+          recordType: input.recordType,
+          valueNumeric: input.valueNumeric,
+          unit: input.unit,
+          recordedAt: input.recordedAt || new Date(),
+          createdAt: new Date(),
+        };
+        
+        const docRef = await db
+          .collection(`users/${context.user.id}/healthRecords`)
+          .add(recordData);
+          
+        const doc = await docRef.get();
+        const data = doc.data();
+        
+        return { 
+          id: doc.id, 
+          recordType: data?.recordType || 'HEART_RATE',
+          valueNumeric: data?.valueNumeric || null,
+          unit: data?.unit || null,
+          recordedAt: data?.recordedAt?.toDate() || new Date(),
+          createdAt: data?.createdAt?.toDate() || new Date(),
+        };
+      } catch (error) {
+        console.error('Error adding health record:', error);
+        throw new Error('Failed to add health record');
+      }
+    },
+  },
+};

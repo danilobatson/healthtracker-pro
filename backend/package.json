@@ -11,7 +11,9 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "graphql:test": "node test-graphql.js",
-    "graphql:codegen": "graphql-codegen --config codegen.yml"
+    "graphql:codegen": "graphql-codegen --config codegen.yml",
+    "codegen": "graphql-codegen --config codegen.yml",
+    "codegen:watch": "graphql-codegen --config codegen.yml --watch"
   },
   "dependencies": {
     "@apollo/server": "^4.12.2",
@@ -31,9 +33,11 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
-    "@graphql-codegen/cli": "^5.0.7",
-    "@graphql-codegen/typescript": "^4.1.6",
-    "@graphql-codegen/typescript-resolvers": "^4.5.1",
+    "@graphql-codegen/cli": "^5.0.2",
+    "@graphql-codegen/typed-document-node": "^5.1.2",
+    "@graphql-codegen/typescript": "^4.0.6",
+    "@graphql-codegen/typescript-operations": "^4.6.1",
+    "@graphql-codegen/typescript-resolvers": "^4.2.0",
     "@tailwindcss/postcss": "^4",
     "@types/jest": "^30.0.0",
     "@types/node": "^20.19.1",

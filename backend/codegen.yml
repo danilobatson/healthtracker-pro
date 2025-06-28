@@ -7,4 +7,11 @@ generates:
       - "typescript-resolvers"
     config:
       useIndexSignature: true
-      contextType: "../../types#GraphQLContext"
+      contextType: "../context#GraphQLContext"
+      mappers:
+        User: "../../types#User"
+        HealthRecord: "../../types#HealthRecord"
+      scalars:
+        DateTime: "Date"
+        Date: "Date"
+      defaultMapper: "Partial<{T}>"

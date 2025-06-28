@@ -12,8 +12,8 @@ const envSchema = z.object({
   FIREBASE_PRIVATE_KEY: z.string().min(1, 'Firebase private key is required'),
   FIREBASE_CLIENT_EMAIL: z.string().email('Valid Firebase client email is required'),
   
-  // OpenAI configuration
-  OPENAI_API_KEY: z.string().min(1, 'OpenAI API key is required'),
+  // Google Gemini configuration
+  GOOGLE_GEMINI_API_KEY: z.string().min(1, 'Google Gemini API key is required'),
   
   // App configuration
   NEXTAUTH_SECRET: z.string().min(1, 'NextAuth secret is required'),
