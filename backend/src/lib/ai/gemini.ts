@@ -1,0 +1,191 @@
+// Google Gemini AI service for health insights
+
+import { GoogleGenerativeAI } from '@google/generative-ai';
+import { env } from '../config';
+import { HealthRecord, HealthInsight } from '../../types';
+
+// Initialize Google Gemini
+const genAI = new GoogleGenerativeAI(env.GOOGLE_GEMINI_API_KEY);
+
+export class GeminiHealthAnalyzer {
+  private model;
+
+  constructor() {
+    // Use Gemini 2.0 Flash Lite model - faster and more efficient
+    this.model = genAI.getGenerativeModel({ model: 'gemini-2.0-flash-lite' });
+  }
+
+  /**
+   * Generate health insights from user's health data
+   */
+  async generateHealthInsights(
+    healthRecords: HealthRecord[],
+    userProfile: { age?: number; gender?: string; heightCm?: number }
+  ): Promise<HealthInsight[]> {
+    try {
+      // Prepare the health data summary
+      const healthDataSummary = this.prepareHealthDataSummary(healthRecords, userProfile);
+      
+      const prompt = `
+        You are a healthcare data analyst AI. Analyze the following health data and provide 3-5 personalized health insights.
+        
+        User Profile:
+        - Age: ${userProfile.age || 'Not specified'}
+        - Gender: ${userProfile.gender || 'Not specified'}  
+        - Height: ${userProfile.heightCm ? `${userProfile.heightCm}cm` : 'Not specified'}
+        
+        Recent Health Data:
+        ${healthDataSummary}
+        
+        Please provide insights in the following JSON format:
+        [
+          {
+            "title": "Brief insight title",
+            "description": "Detailed description with actionable advice",
+            "insightType": "trend_analysis|recommendation|risk_alert|achievement",
+            "confidenceScore": 0.8
+          }
+        ]
+        
+        Focus on:
+        1. Identifying trends and patterns
+        2. Providing actionable health recommendations
+        3. Highlighting potential health concerns (if any)
+        4. Celebrating positive achievements
+        5. Suggesting lifestyle improvements
+        
+        Keep insights supportive, evidence-based, and avoid medical diagnosis.
+        Return only valid JSON array.
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      const text = response.text();
+      
+      // Parse the JSON response
+      const insights = JSON.parse(this.cleanJsonResponse(text));
+      
+      // Convert to our HealthInsight format
+      return insights.map((insight: any, index: number) => ({
+        id: `gemini-${Date.now()}-${index}`,
+        userId: '', // Will be set by the resolver
+        insightType: insight.insightType,
+        title: insight.title,
+        description: insight.description,
+        confidenceScore: insight.confidenceScore || 0.8,
+        isRead: false,
+        relatedRecordIds: healthRecords.slice(0, 3).map(r => r.id), // Link to recent records
+        createdAt: new Date(),
+      }));
+      
+    } catch (error) {
+      console.error('Error generating health insights with Gemini:', error);
+      
+      // Return fallback insights if AI fails
+      return this.getFallbackInsights();
+    }
+  }
+
+  /**
+   * Generate a specific health recommendation
+   */
+  async generateHealthRecommendation(
+    recordType: string,
+    recentValues: number[],
+    target?: number
+  ): Promise<string> {
+    try {
+      const prompt = `
+        As a health advisor AI, provide a brief recommendation for someone tracking ${recordType}.
+        Recent values: ${recentValues.join(', ')}
+        ${target ? `Target value: ${target}` : ''}
+        
+        Provide a supportive, actionable recommendation in 1-2 sentences.
+        Focus on lifestyle improvements and general wellness advice.
+        Avoid medical diagnosis or specific medical advice.
+      `;
+
+      const result = await this.model.generateContent(prompt);
+      const response = await result.response;
+      return response.text().trim();
+      
+    } catch (error) {
+      console.error('Error generating recommendation:', error);
+      return 'Continue tracking your health data regularly and consult with your healthcare provider for personalized advice.';
+    }
+  }
+
+  /**
+   * Prepare health data summary for AI analysis
+   */
+  private prepareHealthDataSummary(
+    records: HealthRecord[],
+    userProfile: { age?: number; gender?: string; heightCm?: number }
+  ): string {
+    const recordsByType = records.reduce((acc, record) => {
+      if (!acc[record.recordType]) {
+        acc[record.recordType] = [];
+      }
+      acc[record.recordType].push(record);
+      return acc;
+    }, {} as Record<string, HealthRecord[]>);
+
+    let summary = '';
+    
+    Object.entries(recordsByType).forEach(([type, typeRecords]) => {
+      summary += `\n${type.toUpperCase()}:\n`;
+      
+      const recent5 = typeRecords
+        .sort((a, b) => new Date(b.recordedAt).getTime() - new Date(a.recordedAt).getTime())
+        .slice(0, 5);
+        
+      recent5.forEach(record => {
+        if (type === 'blood_pressure') {
+          summary += `  ${record.systolic}/${record.diastolic} mmHg (${new Date(record.recordedAt).toLocaleDateString()})\n`;
+        } else {
+          summary += `  ${record.valueNumeric} ${record.unit || ''} (${new Date(record.recordedAt).toLocaleDateString()})\n`;
+        }
+      });
+    });
+
+    return summary;
+  }
+
+  /**
+   * Clean and extract JSON from AI response
+   */
+  private cleanJsonResponse(text: string): string {
+    // Remove markdown code blocks and extra text
+    let cleaned = text.replace(/```json\n?/g, '').replace(/```\n?/g, '');
+    
+    // Try to find JSON array in the response
+    const jsonMatch = cleaned.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return jsonMatch[0];
+    }
+    
+    return cleaned.trim();
+  }
+
+  /**
+   * Fallback insights if AI service fails
+   */
+  private getFallbackInsights(): HealthInsight[] {
+    return [
+      {
+        id: `fallback-${Date.now()}`,
+        userId: '',
+        insightType: 'recommendation',
+        title: 'Keep Tracking Your Health',
+        description: 'Regular health monitoring is key to maintaining wellness. Continue logging your vital signs consistently.',
+        confidenceScore: 1.0,
+        isRead: false,
+        relatedRecordIds: [],
+        createdAt: new Date(),
+      },
+    ];
+  }
+}
+
+// Export singleton instance
+export const geminiHealthAnalyzer = new GeminiHealthAnalyzer();
