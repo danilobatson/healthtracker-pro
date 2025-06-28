@@ -11,12 +11,15 @@
   "dependencies": {
     "@apollo/server": "^4.12.2",
     "@as-integrations/next": "^3.2.0",
+    "@clerk/nextjs": "^6.23.1",
     "@graphql-tools/schema": "^10.0.23",
+    "firebase-admin": "^13.4.0",
     "graphql": "^16.11.0",
     "graphql-tag": "^2.12.6",
     "next": "15.3.4",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0"
+    "react-dom": "^19.0.0",
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
