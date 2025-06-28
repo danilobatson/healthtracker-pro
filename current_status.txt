@@ -1,0 +1,13 @@
+=== Git Status Summary ===
+Total commits: 18
+Latest commit: 9c1a5d1 feat(mobile): add environment configuration template
+
+=== Project Structure ===
+./backend/verify-env.js
+./backend/README.md
+./backend/package.json
+./backend/SERVICE_SETUP.md
+./backend/setup-env.js
+./DEMO.md
+./README.md
+./mobile/package.json
